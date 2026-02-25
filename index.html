@@ -14,28 +14,35 @@
 		</div>
 		<div class="controls">
 			<button id="btnNew">新局</button>
+			<button id="btnRestart">重新開始</button>
+			<button id="btnHome">主頁</button>
 			<button id="btnStory">故事</button>
 			<button id="btnHelp">教學</button>
 			<button id="btnSettings">設定</button>
 		</div>
 	</header>
 
+	<button id="btnInfo" class="infoFab" aria-label="資訊">資訊</button>
 	<main class="layout">
-		<section class="panel left">
-			<h2>狀態</h2>
-			<div id="status" class="status"></div>
+				<section class="panel left">
+			<details id="foldStatus" class="fold">
+				<summary>狀態 <span id="statusMini" class="mini"></span></summary>
+				<div id="status" class="status"></div>
 
-			<h3>章節</h3>
-			<div id="chapter" class="pile"></div>
+				<h3>章節</h3>
+				<div id="chapter" class="pile"></div>
 
-			<h3>當前牌型</h3>
-			<div id="pile" class="pile"></div>
+				<h3>當前牌型</h3>
+				<div id="pile" class="pile"></div>
 
-			<h3>控場權</h3>
-			<div id="lead" class="lead"></div>
+				<h3>控場權</h3>
+				<div id="lead" class="lead"></div>
+			</details>
 
-			<h3>事件</h3>
-			<div id="log" class="log"></div>
+			<details id="foldLog" class="fold">
+				<summary>事件</summary>
+				<div id="log" class="log"></div>
+			</details>
 		</section>
 
 		<section class="panel center">
@@ -69,6 +76,10 @@
 			<!-- 遊戲畫面 -->
 			<section id="screenGame" class="screen hidden">
 				<div class="table">
+					<div class="tableCenter">
+						<div class="tableTitle">戰略桌</div>
+						<div id="pileStack" class="pileStack" aria-label="桌面出牌堆"></div>
+					</div>
 					<div class="playerRow" id="rowP3">
 						<div class="pbox">
 							<div class="pname" id="p3Name"></div>
@@ -111,12 +122,13 @@
 			<div class="actions">
 				<button id="btnPlay" class="primary">出牌</button>
 				<button id="btnPass">PASS</button>
+				<button id="btnHint">提示</button>
 				<button id="btnSkill1">技能 1</button>
 				<button id="btnSkill2">技能 2</button>
 			</div>
 
 			<h3>已選擇</h3>
-			<div id="selected" class="selected"></div>
+			<div class="selectedWrap"><div id="selected" class="selected"></div></div>
 
 			<div class="small">提示：技能按鈕會依派系與條件啟用。</div>
 		</section>
