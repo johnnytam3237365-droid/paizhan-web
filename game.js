@@ -243,6 +243,7 @@ const state = {
 	passCount: 0,
 	over: false,
 	config: { players: 4 },
+	lastStartConfig: null,
 };
 
 function newPlayer(name, isHuman){
@@ -279,10 +280,15 @@ function currentChapter(){
 
 function setStatus(){
 	const p = state.players[state.turn];
-	const pileText = state.pile ? `${TYPE_NAME[state.pile.eval.type]}（主點數 ${rankFace(state.pile.eval.mainRank)}）` : '無（自由出牌）';
+	const pileText = state.pile ? `${TYPE_NAME[state.pile.eval.type]}（主點數 ${rankFace(state.pile.eval.mainRank)}）` : '無';
 	$('status').textContent = [`回合：${p.name}`, `場上：${pileText}`, `PASS 連續次數：${state.passCount}`].join('\n');
 	const ch = currentChapter();
 	$('chapter').textContent = ch ? `${ch.title}\n（故事模式）` : '自由對戰（無章節）';
+	// mobile summary line
+	const mini = $('statusMini');
+	if(mini){
+		mini.textContent = `回合：${p.name} ｜ 場上：${pileText}`;
+	}
 }
 
 function cardDiv(c, small=false, showFront=true){
@@ -343,20 +349,22 @@ function renderHand(pi){
 	const showFront = !is2P || (state.turn===pi);
 	p.hand.forEach((c, idx)=>{
 		const d = cardDiv(c, false, showFront);
+		d.dataset.idx = String(idx);
 		if(showFront && p.selectedIdx.has(idx)) d.classList.add('selected');
 		d.addEventListener('click', ()=>{
 			if(state.over) return;
-			const cur = state.players[state.turn];
-			if(!cur?.isHuman) return;
-			// 只允許輪到該 human 才可以點
-			if(state.turn !== pi) return;
+			// 只允許點自己嘅手牌（人類玩家）
+			if(!p.isHuman) return;
+			// 允許提前揀牌（就算未輪到你 / 甚至 AI 回合）
+			// 真正出牌仍然只會喺 btnPlay click / updateButtons() 判斷。
 
 			if(p.selectedIdx.has(idx)) p.selectedIdx.delete(idx);
 			else p.selectedIdx.add(idx);
 
+			// 只更新該張牌嘅 class，避免整排重繪造成閃爍
+			if(showFront) d.classList.toggle('selected', p.selectedIdx.has(idx));
 			renderSelected();
 			updateButtons();
-			renderHand(pi);
 		});
 		el.appendChild(d);
 	});
@@ -522,7 +530,13 @@ function findDiamond2Owner(){
 }
 
 // ---------- 回合 ----------
-function nextTurn(){ state.turn = (state.turn + 1) % state.players.length; }
+function nextTurn(){
+	state.turn = (state.turn + 1) % state.players.length;
+	// 熱座位：每次換手就清走所有玩家已選，避免交機時露底
+	for(const p of state.players){
+		if(p?.selectedIdx) p.selectedIdx.clear();
+	}
+}
 
 function passTurn(pi){
 	const p = state.players[pi];
@@ -532,10 +546,12 @@ function passTurn(pi){
 
 	if(state.passCount >= (state.players.length - 1) && state.pile){
 		log(`所有人 PASS，${state.players[state.lead].name} 獲得控場權，場上清空。`);
-		state.pile = null;
-		state.passCount = 0;
-		state.turn = state.lead;
-		return { cleared:true };
+			state.pile = null;
+	state.pileStack = [];
+	state.passCount = 0;
+	state.turn = state.lead;
+	renderPileStack();
+	return { cleared:true };
 	}
 	return { cleared:false };
 }
@@ -669,6 +685,7 @@ function readyFlow2P(){
 // ---------- 開局 ----------
 async function startNewGame(config){
 	// config: { mode:'story'|'free', players:2|4 }
+	state.lastStartConfig = clone(config);
 	state.mode = config.mode;
 	state.config = config;
 	state.chapterIndex = 0;
@@ -792,6 +809,94 @@ $('btnPass').addEventListener('click', ()=>{
 $('btnSkill1').addEventListener('click', ()=> log('技能按鈕已保留入口（版本 A），如要強化效果再擴充。'));
 $('btnSkill2').addEventListener('click', ()=> log('技能按鈕已保留入口（版本 A），如要強化效果再擴充。'));
 
+// ---------- 提示出牌 ----------
+function syncHandSelectedClasses(pi){
+	const p = state.players[pi];
+	if(!p?.isHuman) return;
+	const el = $(pi===0?'p0Hand':pi===1?'p1Hand':pi===2?'p2Hand':'p3Hand');
+	if(!el) return;
+	for(const child of el.children){
+		const idx = Number(child.dataset?.idx);
+		if(Number.isFinite(idx)) child.classList.toggle('selected', p.selectedIdx.has(idx));
+	}
+}
+function applyHintForCurrentPlayer(){
+	const cur = state.players[state.turn];
+	if(!cur?.isHuman) return;
+	cur.selectedIdx.clear();
+	const hand = cur.hand;
+	const pileEval = state.pile?.eval || null;
+	const legal = [];
+	// 1 張
+	for(let i=0;i<hand.length;i++){
+		const ev = evaluatePlay([hand[i]]);
+		if(ev.ok && compareEval(ev, pileEval)) legal.push({ idxs:[i], ev });
+	}
+	// 2 張（對子）
+	for(let i=0;i<hand.length;i++){
+		for(let j=i+1;j<hand.length;j++){
+			if(hand[i].rank!==hand[j].rank) continue;
+			const ev = evaluatePlay([hand[i], hand[j]]);
+			if(ev.ok && compareEval(ev, pileEval)) legal.push({ idxs:[i,j], ev });
+		}
+	}
+	// 5 張（順子/同花/葫蘆/同花順）
+	if(hand.length>=5){
+		for(let a=0;a<hand.length;a++){
+			for(let b=a+1;b<hand.length;b++){
+				for(let c=b+1;c<hand.length;c++){
+					for(let d=c+1;d<hand.length;d++){
+						for(let e=d+1;e<hand.length;e++){
+							const pick = [hand[a],hand[b],hand[c],hand[d],hand[e]];
+							const ev = evaluatePlay(pick);
+							if(ev.ok && compareEval(ev, pileEval)) legal.push({ idxs:[a,b,c,d,e], ev });
+						}
+					}
+				}
+			}
+		}
+	}
+	if(legal.length===0){
+		log('提示：冇可出嘅牌。');
+		renderSelected();
+		updateButtons();
+		syncHandSelectedClasses(state.turn);
+		return;
+	}
+	legal.sort((x,y)=> (x.ev.type-y.ev.type) || (x.ev.mainRank-y.ev.mainRank) || (x.idxs.length-y.idxs.length));
+	for(const i of legal[0].idxs) cur.selectedIdx.add(i);
+	log('提示：已幫你揀咗一手可出嘅牌。');
+	renderSelected();
+	updateButtons();
+	syncHandSelectedClasses(state.turn);
+}
+// ---------- 發佈包裝：主頁 / 重新開始 ----------
+function goHome(){
+	for(const p of state.players){ if(p?.selectedIdx) p.selectedIdx.clear(); }
+	setScreen('title');
+	render();
+}
+async function restartGame(){
+	if(!state.lastStartConfig){
+		log('未有上一局設定，請由主頁開始。');
+		goHome();
+		return;
+	}
+	await startNewGame(state.lastStartConfig);
+}
+$('btnHome').addEventListener('click', ()=> goHome());
+$('btnRestart').addEventListener('click', ()=> restartGame());
+// Mobile：資訊浮動按鈕（開關左側資訊 panel）
+const btnInfo = $('btnInfo');
+if(btnInfo){
+	btnInfo.addEventListener('click', ()=>{
+		document.body.classList.toggle('infoOpen');
+	});
+}
+$('btnHint').addEventListener('click', ()=>{
+	if(state.over) return;
+	applyHintForCurrentPlayer();
+});
 // ---------- 啟動 ----------
 function boot(){
 	$('subTitle').textContent = '單機 Web 版（模式：故事/2P/4P）';
