@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width,initial-scale=1" />
+	<title>派戰 PaiZhan (Web)</title>
+	<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+	<header class="top">
+		<div class="brand">
+			<div class="logo">派戰</div>
+			<div class="sub" id="subTitle">單機 Web 版</div>
+		</div>
+		<div class="controls">
+			<button id="btnNew">新局</button>
+			<button id="btnStory">故事</button>
+			<button id="btnHelp">教學</button>
+			<button id="btnSettings">設定</button>
+		</div>
+	</header>
+
+	<main class="layout">
+		<section class="panel left">
+			<h2>狀態</h2>
+			<div id="status" class="status"></div>
+
+			<h3>章節</h3>
+			<div id="chapter" class="pile"></div>
+
+			<h3>當前牌型</h3>
+			<div id="pile" class="pile"></div>
+
+			<h3>控場權</h3>
+			<div id="lead" class="lead"></div>
+
+			<h3>事件</h3>
+			<div id="log" class="log"></div>
+		</section>
+
+		<section class="panel center">
+			<!-- 標題畫面 -->
+			<section id="screenTitle" class="screen">
+				<div class="titleWrap">
+					<div class="bigTitle">派戰</div>
+					<div class="bigSub" id="verLabel"></div>
+					<div class="modeCards">
+						<button id="cardStory" class="modeCard primary">
+							<div class="modeTitle">故事模式</div>
+							<div class="modeDesc">六章故事線（暫時每章不改規則），4 人局：你 vs 3 AI。</div>
+						</button>
+						<button id="card2p" class="modeCard">
+							<div class="modeTitle">二人對戰</div>
+							<div class="modeDesc">你 vs 另一個玩家。開局前兩邊要按「我準備好」先派牌。</div>
+						</button>
+						<button id="card4p" class="modeCard">
+							<div class="modeTitle">四人對戰</div>
+							<div class="modeDesc">自由模式：4 人局（你 vs 3 AI）。</div>
+						</button>
+					</div>
+					<div class="titleBtns">
+						<button id="btnTitleHelp">教學</button>
+						<button id="btnTitleSettings">設定</button>
+					</div>
+					<div class="small">提示：你之後要改派系技能／章節規則，就改 `game.js` 的 `FACTIONS` 同 `CHAPTERS`。</div>
+				</div>
+			</section>
+
+			<!-- 遊戲畫面 -->
+			<section id="screenGame" class="screen hidden">
+				<div class="table">
+					<div class="playerRow" id="rowP3">
+						<div class="pbox">
+							<div class="pname" id="p3Name"></div>
+							<div class="pfaction" id="p3Faction"></div>
+							<div class="phand" id="p3Hand"></div>
+						</div>
+					</div>
+
+					<div class="playerRow" id="rowP2">
+						<div class="pbox">
+							<div class="pname" id="p2Name"></div>
+							<div class="pfaction" id="p2Faction"></div>
+							<div class="phand" id="p2Hand"></div>
+						</div>
+					</div>
+
+					<div class="playerRow mid" id="rowP1">
+						<div class="pbox">
+							<div class="pname" id="p1Name"></div>
+							<div class="pfaction" id="p1Faction"></div>
+							<div class="phand" id="p1Hand"></div>
+						</div>
+					</div>
+
+					<div class="playerRow" id="rowP0">
+						<div class="pbox">
+							<div class="pname" id="p0Name"></div>
+							<div class="pfaction" id="p0Faction"></div>
+							<div class="phand" id="p0Hand"></div>
+						</div>
+					</div>
+				</div>
+			</section>
+		</section>
+
+		<section class="panel right">
+			<h2>你的回合</h2>
+			<div class="hint">點選手牌以選取，然後按「出牌」或「PASS」。</div>
+
+			<div class="actions">
+				<button id="btnPlay" class="primary">出牌</button>
+				<button id="btnPass">PASS</button>
+				<button id="btnSkill1">技能 1</button>
+				<button id="btnSkill2">技能 2</button>
+			</div>
+
+			<h3>已選擇</h3>
+			<div id="selected" class="selected"></div>
+
+			<div class="small">提示：技能按鈕會依派系與條件啟用。</div>
+		</section>
+	</main>
+
+	<!-- 教學 -->
+	<dialog id="dlgHelp">
+		<h2>教學（簡化規則）</h2>
+		<ul>
+			<li>故事模式：4 人局（你 vs 3 AI）。</li>
+			<li>二人對戰：你 vs 另一個玩家（兩邊按「我準備好」先派牌）。</li>
+			<li>牌型：單張、對子、順子（5 張）、同花（5 張）、葫蘆（3+2）、同花順（5 張）。</li>
+			<li>比較：依你設定（單張/對子需同牌型；順子以上可壓更大牌型）。</li>
+			<li>花色大小：♠ &gt; ♥ &gt; ♣ &gt; ♦</li>
+			<li>所有人 PASS 後，最後出牌者獲得控場權，可重新出任意牌型。</li>
+		</ul>
+		<div class="dlgActions">
+			<button id="btnCloseHelp">關閉</button>
+		</div>
+	</dialog>
+
+	<!-- 故事 -->
+	<dialog id="dlgStory">
+		<h2>故事</h2>
+		<div id="storyText" class="story"></div>
+		<div class="dlgActions">
+			<button id="btnCloseStory">關閉</button>
+		</div>
+	</dialog>
+
+	<!-- 準備（2P 開局用） -->
+	<dialog id="dlgReady">
+		<h2>準備</h2>
+		<div id="readyText" class="story"></div>
+		<div class="dlgActions">
+			<button id="btnReadyOk">我準備好</button>
+		</div>
+	</dialog>
+
+	<!-- 設定 -->
+	<dialog id="dlgSettings">
+		<h2>設定</h2>
+		<div class="settingsGrid">
+			<label class="setRow">
+				<span>音效</span>
+				<input id="setSfx" type="checkbox" checked />
+			</label>
+			<label class="setRow">
+				<span>AI 動作速度</span>
+				<select id="setSpeed">
+					<option value="fast">快</option>
+					<option value="normal" selected>中</option>
+					<option value="slow">慢</option>
+				</select>
+			</label>
+		</div>
+		<div class="dlgActions">
+			<button id="btnCloseSettings">關閉</button>
+		</div>
+	</dialog>
+
+	<script src="game.js"></script>
+</body>
+</html>
