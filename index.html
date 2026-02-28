@@ -4,6 +4,8 @@
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width,initial-scale=1" />
 	<title>派戰 PaiZhan (Web)</title>
+	<!-- 避免瀏覽器自動請求 /favicon.ico 造成 404 紅字 -->
+	<link rel="icon" href="data:," />
 	<link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -22,29 +24,7 @@
 		</div>
 	</header>
 
-	<button id="btnInfo" class="infoFab" aria-label="資訊">資訊</button>
-	<main class="layout">
-				<section class="panel left">
-			<details id="foldStatus" class="fold">
-				<summary>狀態 <span id="statusMini" class="mini"></span></summary>
-				<div id="status" class="status"></div>
-
-				<h3>章節</h3>
-				<div id="chapter" class="pile"></div>
-
-				<h3>當前牌型</h3>
-				<div id="pile" class="pile"></div>
-
-				<h3>控場權</h3>
-				<div id="lead" class="lead"></div>
-			</details>
-
-			<details id="foldLog" class="fold">
-				<summary>事件</summary>
-				<div id="log" class="log"></div>
-			</details>
-		</section>
-
+		<main class="layout">
 		<section class="panel center">
 			<!-- 標題畫面 -->
 			<section id="screenTitle" class="screen">
@@ -65,6 +45,14 @@
 							<div class="modeDesc">自由模式：4 人局（你 vs 3 AI）。</div>
 						</button>
 					</div>
+					<div class="small" style="margin-top:10px; opacity:.95;">
+						AI 難度：
+						<select id="setAiLevel" style="margin-left:8px; padding:10px 12px; border-radius:12px; background: rgba(0,0,0,.2); color: #e8ecff; border:1px solid rgba(255,255,255,.18); font-weight:900;">
+							<option value="basic">基礎</option>
+							<option value="advanced">進階</option>
+							<option value="expert" selected>高手</option>
+						</select>
+					</div>
 					<div class="titleBtns">
 						<button id="btnTitleHelp">教學</button>
 						<button id="btnTitleSettings">設定</button>
@@ -73,16 +61,26 @@
 				</div>
 			</section>
 
+			<!-- 勝利畫面 -->
+			<section id="screenVictory" class="screen hidden">
+				<div class="victoryWrap">
+					<div class="victoryTitle">勝利</div>
+					<div class="victoryName" id="victoryName">—</div>
+					<div class="victorySub" id="victorySub">戰局已定。</div>
+					<div class="victoryBtns">
+						<button id="btnVictoryRestart" class="modeCard primary">再開一局</button>
+						<button id="btnVictoryHome" class="modeCard">返回主頁</button>
+					</div>
+				</div>
+			</section>
 			<!-- 遊戲畫面 -->
 			<section id="screenGame" class="screen hidden">
 				<div class="table">
-					<div class="tableCenter">
-						<div class="tableTitle">戰略桌</div>
-						<div id="pileStack" class="pileStack" aria-label="桌面出牌堆"></div>
-					</div>
+					<!-- 對面 3 AI -->
 					<div class="playerRow" id="rowP3">
 						<div class="pbox">
 							<div class="pname" id="p3Name"></div>
+							<div class="php" id="p3Hp"><div class="hpBar"><div class="hpFill high" style="width:100%"></div></div><div class="hpText">—</div></div>
 							<div class="pfaction" id="p3Faction"></div>
 							<div class="phand" id="p3Hand"></div>
 						</div>
@@ -91,6 +89,7 @@
 					<div class="playerRow" id="rowP2">
 						<div class="pbox">
 							<div class="pname" id="p2Name"></div>
+							<div class="php" id="p2Hp"><div class="hpBar"><div class="hpFill high" style="width:100%"></div></div><div class="hpText">—</div></div>
 							<div class="pfaction" id="p2Faction"></div>
 							<div class="phand" id="p2Hand"></div>
 						</div>
@@ -99,14 +98,33 @@
 					<div class="playerRow mid" id="rowP1">
 						<div class="pbox">
 							<div class="pname" id="p1Name"></div>
+							<div class="php" id="p1Hp"><div class="hpBar"><div class="hpFill high" style="width:100%"></div></div><div class="hpText">—</div></div>
 							<div class="pfaction" id="p1Faction"></div>
 							<div class="phand" id="p1Hand"></div>
 						</div>
 					</div>
 
+					<!-- 桌面 HUD + 出牌堆 -->
+					<div class="tableCenter" aria-label="桌面中央">
+						<div class="tableTitle" id="tableTitle"></div>
+						<div class="hud" aria-label="桌面資訊">
+							<div class="hudLine" id="hudLine1">回合：—</div>
+							<div class="hudLine" id="hudLine2">場上：— ｜ 控場：—</div>
+						</div>
+							<!-- 目前場上牌（清晰展示） -->
+						<div id="currentPile" class="currentPile" aria-label="目前場上牌"></div>
+						<!-- 出牌歷史（列表） -->
+						<div id="pileStack" class="pileStack" aria-label="出牌歷史"></div>
+						<!-- 兼容：舊邏輯容器（避免 JS 報錯） -->
+						<div id="pile" class="pile hidden" aria-hidden="true"></div>
+						<div id="lead" class="lead hidden" aria-hidden="true"></div>
+					</div>
+
+					<!-- 你 -->
 					<div class="playerRow" id="rowP0">
 						<div class="pbox">
 							<div class="pname" id="p0Name"></div>
+							<div class="php" id="p0Hp"><div class="hpBar"><div class="hpFill high" style="width:100%"></div></div><div class="hpText">—</div></div>
 							<div class="pfaction" id="p0Faction"></div>
 							<div class="phand" id="p0Hand"></div>
 						</div>
@@ -115,23 +133,24 @@
 			</section>
 		</section>
 
-		<section class="panel right">
-			<h2>你的回合</h2>
+		<section class="panel right hidden">
+			<h2>操作區</h2>
 			<div class="hint">點選手牌以選取，然後按「出牌」或「PASS」。</div>
 
 			<div class="actions">
-				<button id="btnPlay" class="primary">出牌</button>
-				<button id="btnPass">PASS</button>
-				<button id="btnHint">提示</button>
-				<button id="btnSkill1">技能 1</button>
-				<button id="btnSkill2">技能 2</button>
+				<button id="btnPlay_old" class="primary" disabled>出牌</button>
+				<button id="btnPass_old" disabled>PASS</button>
+				<button id="btnHint_old" disabled>提示</button>
+				<button id="btnSkill1_old" disabled>技能 1</button>
+				<button id="btnSkill2_old" disabled>技能 2</button>
 			</div>
 
 			<h3>已選擇</h3>
-			<div class="selectedWrap"><div id="selected" class="selected"></div></div>
+			<div class="selectedWrap"><div id="selected_old" class="selected"></div></div>
 
 			<div class="small">提示：技能按鈕會依派系與條件啟用。</div>
 		</section>
+
 	</main>
 
 	<!-- 教學 -->
@@ -168,6 +187,15 @@
 		</div>
 	</dialog>
 
+	<!-- 派系抽卡（開局） -->
+	<dialog id="dlgDraft">
+		<h2>抽派系</h2>
+		<div class="hint">請揀 1 張派系牌（每局派系唔會重覆，包括 AI）。</div>
+		<div id="draftGrid" class="draftGrid" aria-label="派系抽卡區"></div>
+		<div class="dlgActions">
+			<button id="btnDraftCancel">取消</button>
+		</div>
+	</dialog>
 	<!-- 設定 -->
 	<dialog id="dlgSettings">
 		<h2>設定</h2>
@@ -175,6 +203,10 @@
 			<label class="setRow">
 				<span>音效</span>
 				<input id="setSfx" type="checkbox" checked />
+			</label>
+			<label class="setRow">
+				<span>背景音樂</span>
+				<input id="setMusic" type="checkbox" checked />
 			</label>
 			<label class="setRow">
 				<span>AI 動作速度</span>
@@ -187,6 +219,25 @@
 		</div>
 		<div class="dlgActions">
 			<button id="btnCloseSettings">關閉</button>
+		</div>
+	</dialog>
+
+	<!-- 浮動操作列（取代右側操作區） -->
+	<div class="actionBar hidden" id="actionBar" aria-label="操作列">
+		<button id="btnPlay" class="primary">出牌</button>
+		<button id="btnPass">PASS</button>
+		<button id="btnCancelSel" class="ghost">取消選牌</button>
+		<button id="btnHint" class="hidden">提示</button>
+		<button id="btnSkill1">技能 1</button>
+		<button id="btnSkill2">技能 2</button>
+	</div>
+		<!-- 選擇目標（取代 prompt） -->
+	<dialog id="dlgSelect">
+		<h2 id="selTitle">選擇</h2>
+		<div id="selHint" class="hint">請選擇一個目標。</div>
+		<div id="selList" class="selList" aria-label="選項"></div>
+		<div class="dlgActions">
+			<button id="btnSelCancel">取消</button>
 		</div>
 	</dialog>
 
