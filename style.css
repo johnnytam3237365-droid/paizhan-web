@@ -23,6 +23,19 @@ body{
 		linear-gradient(180deg, #05060a 0%, #070a14 45%, var(--bg) 100%);
 	color:var(--text);
 }
+/* 遊戲背景圖（由 JS 寫入 --gameBgImg） */
+:root{ --gameBgImg: none; }
+body.inGame{
+	background:
+		linear-gradient(180deg, rgba(0,0,0,.52), rgba(0,0,0,.62)),
+		var(--gameBgImg),
+		radial-gradient(1200px 520px at 30% -10%, rgba(255, 200, 120, .18), transparent 55%),
+		radial-gradient(900px 460px at 85% 10%, rgba(106,228,255,.10), transparent 55%),
+		linear-gradient(180deg, #05060a 0%, #070a14 45%, var(--bg) 100%);
+	background-size: auto, cover, auto, auto, auto;
+	background-position: center, center, center, center, center;
+	background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat;
+}
 
 .top{
 	display:flex;
@@ -36,6 +49,65 @@ body{
 	position:sticky;
 	top:0;
 	z-index:10;
+	transition: transform .18s ease, opacity .18s ease;
+}
+/* 關鍵修正：遊戲中頂部欄改為 fixed（唔再佔位），避免上方出現一條空邊 */
+body.inGame .top{
+	position: fixed;
+	left: 0;
+	right: 0;
+	top: 0;
+}
+/* 遊戲中拉出頂部欄：直接蓋住畫面 + 50% 透明 */
+body.inGame .top{
+	background: rgba(8,12,26,.50);
+	backdrop-filter: blur(10px);
+}
+/* 遊戲中：頂部欄收起（避免阻礙畫面） */
+body.inGame .top{
+	transform: translateY(-100%);
+	opacity: 0;
+	pointer-events: none;
+}
+@media (hover:hover){
+	/* 桌面：保留一條薄邊 + 提示，滑上去就會彈出 */
+	body.inGame .top{ transform: translateY(calc(-100% + 6px)); opacity:.12; pointer-events:auto; }
+	body.inGame .top:hover{ transform: translateY(0); opacity:1; }
+}
+@media (hover:none){
+	/* 手機：完全收起，避免誤觸 */
+	body.inGame .top{ transform: translateY(-100%); opacity:0; pointer-events:none; }
+}
+/* 小提示：話俾你知頂部欄被收起咗 */
+body.inGame::after{
+	content: "提示：頂部選單已收起（移到最上方可顯示）";
+	position: fixed;
+	left: 50%;
+	top: 0;
+	transform: translateX(-50%);
+	z-index: 60;
+	padding: 6px 12px;
+	border-radius: 0 0 12px 12px;
+	background: rgba(10, 14, 26, .55);
+	border: 1px solid rgba(255,255,255,.12);
+	border-top: none;
+	backdrop-filter: blur(10px);
+	box-shadow: 0 10px 26px rgba(0,0,0,.35);
+	color: rgba(255,255,255,.78);
+	font-size: 12px;
+	font-weight: 900;
+	letter-spacing: .04em;
+	pointer-events: none;
+	animation: topHintFade 6s ease forwards;
+}
+@keyframes topHintFade{
+	0%{ opacity:0; transform: translateX(-50%) translateY(-6px); }
+	10%{ opacity:1; transform: translateX(-50%) translateY(0); }
+	70%{ opacity:1; }
+	100%{ opacity:0; }
+}
+@media (hover:none){
+	body.inGame::after{ content: "頂部選單已收起"; }
 }
 .brand .logo{ font-weight:800; letter-spacing:.1em; font-size:18px; }
 .brand .sub{ color:var(--muted); font-size:12px; margin-top:2px; }
@@ -65,18 +137,47 @@ body{
 .layout{
 	display:grid;
 	grid-template-columns: 1fr;
-	gap:12px;
-	padding:12px;
+	gap:10px;
+	padding:8px;
+	max-width: 1400px;
+	margin: 0 auto;
 }
+/* 遊戲中：用盡畫面，唔見邊位 */
+body.inGame .layout{
+	padding: 0;
+	margin: 0;
+	max-width: none;
+	gap: 8px;
+}
+body.inGame .panel.center{
+	width: 100vw;
+	border-radius: 0;
+	border-left: none;
+	border-right: none;
+	padding: 10px 10px 0 10px;
+}
+/* 全平台：遊戲中盡量上移（減少黑邊 / 更集中） */
+body.inGame .layout{ padding-top: 0; padding-bottom: 6px; gap: 8px; }
+body.inGame .panel.center{ margin-top: 0; }
+body.inGame .panel{ padding-top: 10px; }
+/* 遊戲中：因為頂部欄收起，可將主要打牌區上移 */
+body.inGame .layout{ padding-top: 0; }
+body.inGame .panel.center{ margin-top: 0; }
+/* 左 pane 已移除：中心更聚焦 */
+.panel.left{ display:none; }
 
 .panel{
 	background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
 	border:1px solid rgba(255,255,255,.10);
 	border-radius:16px;
 	box-shadow: var(--shadow);
-	padding:14px;
+	padding:12px;
 	overflow:hidden;
 }
+/* 遊戲主面板：唔可以裁切內容（否則中間桌/手牌會被切） */
+.panel.center{ overflow: visible; }
+/* 戰報：已取消（保留空位註解，避免之後又搵唔到） */
+/* .rightLog / #rightLog / #log 已從 index.html 移除 */
 /* Mobile folds */
 .fold{ border:1px solid rgba(255,255,255,.10); border-radius:14px; background: rgba(0,0,0,.14); padding:10px; }
 .mini{ color: rgba(255,255,255,.65); font-weight:700; font-size:12px; margin-left:8px; }
@@ -114,55 +215,200 @@ h3{ margin:14px 0 8px 0; font-size:13px; color:var(--muted); font-weight:700; }
 	line-height:1.55;
 	white-space:pre-line;
 }
+/* HUD（避免字碰字） */
+.hud{
+	display:flex;
+	flex-direction:column;
+	gap:6px;
+	margin-bottom: 10px;
+}
+.hudLine{
+	font-size: 13px;
+	font-weight: 900;
+	letter-spacing: .04em;
+	line-height: 1.35;
+	color: rgba(255,255,255,.82);
+	text-shadow: 0 10px 26px rgba(0,0,0,.45);
+	word-break: keep-all;
+}
+@media (max-width: 420px){
+	.hudLine{ font-size: 12px; }
+}
 
 .pile, .lead{
-	background: rgba(0,0,0,.2);
-	border:1px solid rgba(255,255,255,.10);
+	background: rgba(0,0,0,.12);
+	border:none;
 	border-radius:12px;
 	padding:10px;
 	min-height:56px;
 	white-space:pre-line;
 }
 /* 桌面中央出牌堆（疊牌） */
+/* 中間戰略桌面：已取消（因為已有背景圖） */
 .tableCenter{
 	position: relative;
-	margin: 8px 0 14px 0;
-	padding: 14px;
-	border-radius: 16px;
-	background:
-		radial-gradient(600px 180px at 50% 40%, rgba(0,0,0,.32), transparent 62%),
-		linear-gradient(180deg, rgba(30,70,55,.22), rgba(10,28,22,.18));
-	border: 1px solid rgba(255,255,255,.10);
-	box-shadow: inset 0 0 0 1px rgba(255,200,120,.08);
+	margin: 6px auto 10px auto;
+	padding: 0;
+	max-width: 980px;
+	border-radius: 0;
+	background: transparent;
+	border: none;
+	box-shadow: none;
 }
 .tableTitle{ font-weight: 900; letter-spacing: .12em; color: rgba(255,255,255,.70); font-size: 12px; margin-bottom: 8px; }
-.pileStack{
-	min-height: 140px;
-	position: relative;
-	overflow: hidden;
-}
-.pileLayer{
-	position: absolute;
-	left: 50%;
-	top: 50%;
-	transform:
-		translate(-50%, -50%)
-		translate(calc(var(--off) * 2px), calc(var(--off) * -3px))
-		rotate(calc(var(--off) * 0.6deg));
+/* 目前場上牌：大牌顯示（專業遊戲感） */
+.currentPile{
+	min-height: 108px;
+	border-radius: 16px;
+	border: 1px solid rgba(255,255,255,.12);
+	background:
+		radial-gradient(520px 180px at 50% 45%, rgba(0,0,0,.28), transparent 62%),
+		linear-gradient(180deg, rgba(255,255,255,.05), rgba(0,0,0,.14));
+	padding: 10px;
 	display: flex;
-	gap: 6px;
-	padding: 2px;
-	filter: drop-shadow(0 16px 26px rgba(0,0,0,.40));
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+	margin-bottom: 10px;
+	/* iOS 感：用 transition 而非 animation，避免卡頓 */
+	opacity: .92;
+	will-change: opacity;
+	transition: opacity 140ms cubic-bezier(.2,.9,.25,1);
+	transform: translateZ(0);
 }
-.pileLayer .cardImg{ width: 52px; height: 72px; }
+.currentPile:not(.pileIn){
+	opacity: .72;
+}
+.currentPile .label{
+	position: absolute;
+	transform: translateY(-54px);
+	font-size: 12px;
+	font-weight: 900;
+	letter-spacing: .08em;
+	color: rgba(255,255,255,.70);
+}
+.currentPile .row{
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: center;
+	justify-content: center;
+}
+.currentPile .meta{
+	margin-left: 10px;
+	color: rgba(255,255,255,.80);
+	font-size: 12px;
+	font-weight: 900;
+	white-space: nowrap;
+}
+.currentPile .who{
+	color: rgba(255,255,255,.78);
+	font-size: 12px;
+	font-weight: 900;
+	white-space: nowrap;
+	margin-right: 6px;
+}
+.currentPile .empty{
+	color: rgba(255,255,255,.55);
+	font-size: 12px;
+	font-weight: 800;
+	letter-spacing: .06em;
+}
+/* 已出牌區：已取消（只顯示目前場上牌） */
+#pileStack{ display:none !important; }
+.pileStack{
+	/* 改為橫向歷史帶：每手出牌成為一張小卡，向右延伸 */
+	min-height: 132px;
+	position: relative;
+	overflow-x: auto;
+	overflow-y: hidden;
+	border-radius: 14px;
+	background:
+		radial-gradient(420px 120px at 50% 45%, rgba(0,0,0,.22), transparent 62%);
+	padding: 10px;
+	display: flex;
+	flex-direction: row;
+	gap: 10px;
+	align-items: stretch;
+	scroll-snap-type: x mandatory;
+}
+.pileStack::-webkit-scrollbar{ height: 8px; }
+.pileStack::-webkit-scrollbar-thumb{ background: rgba(255,255,255,.18); border-radius: 999px; }
+/* 簡化：每手出牌 = 一張小卡（橫向） */
+.pileStackRow{
+	flex: 0 0 auto;
+	width: 220px;
+	/* 去框：唔要卡片底框，改成乾淨橫向帶 */
+	border-radius: 0;
+	background: transparent;
+	border: none;
+	padding: 6px 2px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	scroll-snap-align: end;
+}
+.pileStackRow .who{
+	font-size: 12px;
+	font-weight: 900;
+	letter-spacing: .06em;
+	color: rgba(255,255,255,.78);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.pileStackRow .cards{
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 8px;
+}
+/* 已出牌區：第一行橫向疊牌 */
+.pileStackRow .cardRow{
+	display: flex;
+	flex-wrap: nowrap;
+	align-items: center;
+	gap: 0;
+}
+.pileStackRow .cardRow .card{ margin-left: -30px; }
+.pileStackRow .cardRow .card:first-child{ margin-left: 0; }
+.pileStackRow .cardRow .card:nth-child(2){ transform: rotate(-1deg); }
+.pileStackRow .cardRow .card:nth-child(3){ transform: rotate(1.2deg); }
+.pileStackRow .cardRow .card:nth-child(4){ transform: rotate(-0.8deg); }
+.pileStackRow .cardRow .card:nth-child(5){ transform: rotate(0.6deg); }
+.pileStackRow .cardRow .cardImg{ width: 46px; height: 64px; }
+.pileStackRow .cards .meta{
+	color: rgba(255,255,255,.78);
+	white-space: normal;
+	line-height: 1.25;
+	max-width: 210px;
+	font-size: 11px;
+	font-weight: 900;
+}
+/* 技能按鈕：加標題+效果 */
+.skillBtnTitle{ display:block; font-size: 12px; font-weight: 1000; letter-spacing:.04em; }
+.skillBtnDesc{ display:block; margin-top: 4px; font-size: 10px; line-height: 1.25; color: rgba(255,255,255,.72); font-weight: 900; }
+.actionBar button{
+	min-width: 124px;
+	text-align: left;
+	line-height: 1.05;
+}
 @media (max-width: 420px){
-	.pileLayer .cardImg{ width: 46px; height: 64px; }
+	.actionBar button{ min-width: 94px; }
+	.skillBtnDesc{ display:none; }
+}
+@media (max-width: 420px){
 	.pileStack{ min-height: 120px; }
+	.pileStackRow{ width: 190px; }
+	.pileStackRow .cardImg{ width: 40px; height: 56px; }
 }
 
 .log{
 	height:200px;
 	overflow:auto;
+	background: transparent;
+	border: none;
+	padding: 0;
 	font-size:12px;
 	line-height:1.45;
 	color:var(--muted);
@@ -185,25 +431,144 @@ h3{ margin:14px 0 8px 0; font-size:13px; color:var(--muted); font-weight:700; }
 		0 24px 60px rgba(0,0,0,.55),
 		inset 0 0 0 1px rgba(255,200,120,.10);
 }
-.playerRow{ background: rgba(0,0,0,.15); border:1px solid rgba(255,255,255,.10); border-radius:16px; padding:12px; }
-.playerRow.mid{ outline: 1px solid rgba(106,228,255,.35); }
-/* 對面三玩家並列（桌面版） */
+.playerRow{ background: rgba(0,0,0,.10); border:none; border-radius:16px; padding:12px; box-shadow:none; transition: box-shadow .18s ease, transform .18s ease, filter .18s ease; }
+/* 輪到出牌：名字區亮燈 */
+.playerRow.activeTurn{
+	box-shadow:
+		0 0 0 1px rgba(255, 215, 120, .20),
+		0 0 26px rgba(255, 205, 90, .18),
+		0 22px 60px rgba(0,0,0,.45);
+	filter: brightness(1.06) saturate(1.10);
+}
+.playerRow.activeTurn .pname{
+	color: rgba(255,255,255,.95);
+	text-shadow: 0 0 18px rgba(255, 205, 90, .22);
+}
+.playerRow.mid{ outline: none; }
+/* 對面三玩家並列 + 中間大桌面（桌面版） */
 @media (min-width: 980px){
 	#screenGame .table{
 		display:grid;
 		grid-template-columns: 1fr 1fr 1fr;
-		grid-template-rows: auto auto;
+		grid-template-rows: auto auto auto;
 		align-items:start;
 		gap:12px;
 	}
 	#rowP1{ grid-column: 1; grid-row: 1; }
 	#rowP2{ grid-column: 2; grid-row: 1; }
 	#rowP3{ grid-column: 3; grid-row: 1; }
-	#rowP0{ grid-column: 1 / span 3; grid-row: 2; }
+	#screenGame .table .tableCenter{ grid-column: 1 / span 3; grid-row: 2; }
+	#rowP0{ grid-column: 1 / span 3; grid-row: 3; }
 }
 .pname{ font-weight:800; }
+.php{
+	margin-top: 6px;
+	font-size: 12px;
+	font-weight: 1000;
+	letter-spacing: .08em;
+	color: rgba(255,255,255,.75);
+	display:flex;
+	align-items:center;
+	gap:10px;
+}
+.hpBar{
+	width: 110px;
+	height: 10px;
+	border-radius: 999px;
+	background: rgba(255,255,255,.10);
+	border: 1px solid rgba(255,255,255,.12);
+	overflow:hidden;
+	box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+}
+.hpFill{
+	height: 100%;
+	width: 100%;
+	border-radius: 999px;
+	transition: width 160ms cubic-bezier(.2,.9,.25,1), background-color 160ms cubic-bezier(.2,.9,.25,1);
+	will-change: width;
+	box-shadow: 0 0 18px rgba(0,0,0,.28);
+}
+.hpFill.high{ background: linear-gradient(90deg, #23ffb4, #2bd96b); }
+.hpFill.mid{ background: linear-gradient(90deg, #ffe36a, #ffb84a); }
+.hpFill.low{ background: linear-gradient(90deg, #ff6a6a, #ff2e2e); }
+.hpText{ font-size: 11px; font-weight: 1000; letter-spacing: .06em; color: rgba(255,255,255,.78); }
+@media (max-width: 420px){
+	.hpBar{ width: 92px; }
+}
 .pfaction{ color:var(--accent); font-size:12px; margin-top:2px; }
 .phand{ margin-top:10px; display:flex; flex-wrap:wrap; gap:8px; }
+/* 二人對戰：上方玩家（對面）整個區塊置中（只限 2P，避免 4P 左上 AI 被套用） */
+body.is2P #rowP1{
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+}
+body.is2P #rowP1 .php{ justify-content: center; }
+body.is2P #rowP1 .phand{
+	display: flex;
+	justify-content: center;
+	align-items: flex-end;
+}
+#p1Hand{
+	display: flex;
+	flex-wrap: nowrap;
+	justify-content: center;
+	align-items: flex-end;
+	gap: 0;
+	overflow-x: auto;
+	padding: 8px 6px 2px 6px;
+	/* 令整條手牌帶保持置中 */
+	width: fit-content;
+	margin: 0 auto;
+	max-width: min(92vw, 980px);
+}
+#p1Hand::-webkit-scrollbar{ height: 8px; }
+#p1Hand::-webkit-scrollbar-thumb{ background: rgba(255,255,255,.18); border-radius: 999px; }
+#p1Hand .card{ margin-left: -30px; }
+#p1Hand .card:first-child{ margin-left: 0; }
+/* 你手牌：扇形展開（只影響玩家自己） */
+#p0Hand{
+	display: flex;
+	/* 手牌放大少少 */
+	--handCardW: 84px;
+	--handCardH: 116px;
+	flex-wrap: nowrap;
+	justify-content: center;
+	align-items: flex-end;
+	gap: 0;
+	/* 參考圖做法：唔要左右滾動，直接用 transform 擺成弧形 */
+	overflow: hidden;
+	padding: 14px 6px 6px 6px;
+	position: relative;
+}
+#p0Hand::-webkit-scrollbar{ height: 8px; }
+#p0Hand::-webkit-scrollbar-thumb{ background: rgba(255,255,255,.18); border-radius: 999px; }
+#p0Hand .handCard{
+	transform-origin: 50% 140%;
+}
+#p0Hand .handCard .cardImg{
+	width: var(--handCardW);
+	height: var(--handCardH);
+}
+#p0Hand .handCard{
+	transform-origin: 50% 140%;
+	margin-left: -60px; /* 重疊更密（似 MTG Arena / 爐石） */
+	transition: transform .12s ease, filter .12s ease;
+	will-change: transform;
+}
+#p0Hand .handCard:first-child{ margin-left: 0; }
+/* 扇形：由 JS 寫入 --handAngle/--handX/--handY */
+#p0Hand .handCard{
+	transform: translateX(var(--handX, 0px)) translateY(var(--handY, 0px)) rotate(var(--handAngle, 0deg));
+}
+/* 選牌抽高一點點 */
+#p0Hand .handCard.selected{
+	transform: translateX(var(--handX, 0px)) translateY(calc(var(--handY, 0px) - 18px)) rotate(var(--handAngle, 0deg));
+}
+@media (max-width: 420px){
+	#p0Hand .handCard{ margin-left: -28px; }
+}
 
 .hidden{ display:none !important; }
 
@@ -226,8 +591,8 @@ h3{ margin:14px 0 8px 0; font-size:13px; color:var(--muted); font-weight:700; }
 }
 
 .cardImg{
-	width:64px;
-	height:88px;
+	width:74px;
+	height:102px;
 	object-fit:contain;
 	display:block;
 	border-radius: 10px;
@@ -280,12 +645,12 @@ h3{ margin:14px 0 8px 0; font-size:13px; color:var(--muted); font-weight:700; }
 }
 /* 派系圖示 */
 .factionImg{
-	width:18px;
-	height:18px;
+	width:28px;
+	height:28px;
 	object-fit:contain;
 	vertical-align:middle;
-	margin-right:6px;
-	filter: drop-shadow(0 2px 6px rgba(0,0,0,.35));
+	margin-right:8px;
+	filter: drop-shadow(0 3px 10px rgba(0,0,0,.40));
 }
 
 .hint{ color:var(--muted); font-size:12px; line-height:1.5; }
@@ -305,8 +670,8 @@ h3{ margin:14px 0 8px 0; font-size:13px; color:var(--muted); font-weight:700; }
 	min-height:56px;
 	padding:10px;
 	border-radius:12px;
-	border:1px solid rgba(255,255,255,.10);
-	background: rgba(0,0,0,.2);
+	border:none;
+	background: rgba(0,0,0,.12);
 	display:flex;
 	flex-wrap:wrap;
 	gap:8px;
@@ -326,6 +691,31 @@ dialog{
 
 dialog::backdrop{ background: rgba(0,0,0,.55); }
 .dlgActions{ display:flex; justify-content:flex-end; margin-top:12px; gap:10px; }
+/* 開局抽派系：6 張牌背面 */
+.draftGrid{
+	display:grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 12px;
+	margin-top: 12px;
+}
+.draftCard{
+	border: 1px solid rgba(255,255,255,.14);
+	background: rgba(0,0,0,.18);
+	border-radius: 14px;
+	padding: 10px;
+	cursor: pointer;
+	display:flex;
+	flex-direction:column;
+	align-items:center;
+	gap: 8px;
+}
+.draftCard:hover{ border-color: rgba(106,228,255,.55); transform: translateY(-1px); }
+.draftCard img{ width: 84px; height: 116px; object-fit: contain; }
+.draftCard .cap{ font-size: 12px; color: rgba(255,255,255,.65); font-weight: 800; letter-spacing:.06em; }
+@media (max-width: 420px){
+	.draftGrid{ grid-template-columns: repeat(2, 1fr); }
+	.draftCard img{ width: 78px; height: 108px; }
+}
 .dlgActions button{ padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.18); background: rgba(0,0,0,.2); color:var(--text); cursor:pointer; }
 
 .story{
@@ -339,14 +729,182 @@ dialog::backdrop{ background: rgba(0,0,0,.55); }
 .settingsGrid{ display:grid; gap:12px; margin-top:10px; }
 .setRow{ display:flex; justify-content:space-between; align-items:center; gap:12px; color:var(--muted); }
 .setRow select{ padding:8px 10px; border-radius:10px; background: rgba(0,0,0,.2); color: var(--text); border:1px solid rgba(255,255,255,.18); }
+/* 選擇目標 dialog */
+.selList{ display:grid; gap:10px; margin-top:12px; }
+.selBtn{
+	padding: 12px;
+	border-radius: 14px;
+	border: 1px solid rgba(255,255,255,.16);
+	background: rgba(0,0,0,.22);
+	color: var(--text);
+	cursor: pointer;
+	text-align: left;
+	font-weight: 900;
+	letter-spacing: .04em;
+}
+.selBtn:hover{ border-color: rgba(106,228,255,.55); transform: translateY(-1px); }
+.selBtn .sub{ display:block; margin-top:6px; color: rgba(255,255,255,.65); font-weight:800; font-size:12px; letter-spacing:.02em; }
+.selBtn:disabled{ opacity:.45; cursor:not-allowed; transform:none; }
 
-/* screens */
-.screen{ min-height: 520px; }
+/* screens：盡量一屏玩（避免上下拉） */
+.screen{ min-height: 0; }
 .screen.hidden{ display:none; }
+/* 整體高度：以 viewport 為基準，但唔鎖死 body（避免內容被切走） */
+html, body{ height: 100%; }
+body{ overflow-x: hidden; overflow-y: auto; }
+/* 主舞台：桌面盡量一屏；手機/矮屏允許垂直滾動 */
+.layout{ min-height: calc(100vh - 64px); overflow: visible; }
+body.inGame .layout{ min-height: 100vh; }
+/* 中央面板：可以隨高度伸縮 */
+.panel.center{ min-height: 0; }
+/* 遊戲桌面：桌面用 viewport 高度分配；不足時可滾動 */
+#screenGame{ min-height: calc(100vh - 64px); padding-bottom: 110px; }
+body.inGame #screenGame{ padding-top: 0; }
+/* Game table：改用『三段式』分配，並確保中段可縮放 */
+#screenGame .table{
+	display: grid;
+	grid-template-rows: auto minmax(0, 1fr) auto;
+	gap: 10px;
+	min-height: 0;
+}
+/* 中段（戰略桌）：唔裁切（避免你張圖咁『中間被切』）
+   只限制 pileStack 自己嘅高度同滾動 */
+.tableCenter{
+	max-width: 920px;
+	min-height: 0;
+	overflow: visible;
+	display: flex;
+	flex-direction: column;
+}
+.tableCenter #currentPile{ flex: 0 0 auto; }
+.tableCenter #pileStack{ flex: 0 0 auto; overflow-x: auto; overflow-y: hidden; }
+/* 桌面模式：一屏完成（3A 觀感：乾淨、唔切畫面） */
+@media (min-width: 980px) and (min-height: 680px){
+	body.inGame{ overflow: hidden; }
+	body.inGame .layout{ height: 100vh; }
+	body.inGame .panel.center{ height: 100%; overflow: visible; }
+	body.inGame #screenGame{ height: 100%; min-height: 0; }
+	body.inGame #screenGame .table{ height: 100%; }
+	/* 再上移：扣走多餘留白 */
+	body.inGame .layout{ padding-top: 0; padding-bottom: 6px; }
+	body.inGame .tableCenter{ margin-top: 2px; }
+}
+/* 桌面中間戰略桌：唔裁切內容，避免被切 */
+.tableCenter{ max-width: 920px; height: 100%; overflow: visible; display:flex; flex-direction:column; }
+/* 目前場上牌 / 已出牌區：用 clamp 令唔同螢幕都合理 */
+.currentPile{ min-height: clamp(78px, 12vh, 108px); }
+.pileStack{ min-height: clamp(96px, 16vh, 132px); max-height: clamp(120px, 20vh, 160px); }
+/* 戰報浮窗：內容超出就內部滾動 */
+.rightLog{ overflow: hidden; }
+.rightLog .log{ overflow:auto; }
+@media (max-height: 760px){
+	/* 螢幕矮：再收緊一點，確保手牌一定見到 */
+	.pileStack{ max-height: 118px; min-height: 96px; }
+	.currentPile{ min-height: 74px; }
+	#p0Hand{ --handCardW: 76px; --handCardH: 104px; padding-top: 8px; }
+	.actionBar{ bottom: 10px; }
+}
 .titleWrap{ display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:520px; text-align:center; padding:12px; }
 .bigTitle{ font-size:54px; font-weight:900; letter-spacing:.25em; }
 .bigSub{ margin-top:10px; color:var(--muted); font-size:13px; }
 .modeCards{ display:grid; grid-template-columns: 1fr; gap:12px; width:min(760px, 95%); margin-top:18px; }
+/* 勝利畫面 */
+.victoryWrap{
+	min-height:520px;
+	display:flex;
+	flex-direction:column;
+	align-items:center;
+	justify-content:center;
+	text-align:center;
+	padding:16px;
+	/* 你新增咗勝利圖：assets/ui/victory（jpg/png/PNG）。會自動鋪滿做背景。 */
+	background:
+		linear-gradient(180deg, rgba(0,0,0,.35), rgba(0,0,0,.35)),
+		/* 多路徑 fallback：避免你放咗喺 assets/ 或根目錄而唔係 assets/ui */
+		url("assets/ui/victory.jpg"),
+		url("assets/ui/victory.JPG"),
+		url("assets/ui/victory.jpeg"),
+		url("assets/ui/victory.JPEG"),
+		url("assets/victory.jpg"),
+		url("assets/victory.JPG"),
+		url("assets/victory.jpeg"),
+		url("assets/victory.JPEG"),
+		url("victory.jpg"),
+		url("victory.JPG"),
+		url("victory.jpeg"),
+		url("victory.JPEG"),
+		/* 仍保留 png */
+		url("assets/ui/victory.PNG"),
+		url("assets/ui/victory.png"),
+		url("assets/victory.PNG"),
+		url("assets/victory.png"),
+		radial-gradient(900px 420px at 50% 30%, rgba(255, 220, 160, .14), transparent 60%),
+		radial-gradient(800px 420px at 50% 80%, rgba(106,228,255,.10), transparent 62%);
+	background-size:
+		auto,
+		/* 每個 url 都 cover */
+		cover, cover, cover, cover,
+		cover, cover, cover, cover,
+		cover, cover, cover, cover,
+		cover, cover, cover, cover,
+		auto,
+		auto;
+	background-position:
+		center,
+		center, center, center, center,
+		center, center, center, center,
+		center, center, center, center,
+		center, center, center, center,
+		center,
+		center;
+	background-repeat:
+		no-repeat,
+		no-repeat, no-repeat, no-repeat, no-repeat,
+		no-repeat, no-repeat, no-repeat, no-repeat,
+		no-repeat, no-repeat, no-repeat, no-repeat,
+		no-repeat, no-repeat, no-repeat, no-repeat,
+		no-repeat,
+		no-repeat;
+}
+.victoryTitle{
+	font-size:56px;
+	font-weight:1000;
+	letter-spacing:.22em;
+	text-shadow: 0 16px 40px rgba(0,0,0,.55);
+}
+.victoryName{
+	margin-top:10px;
+	font-size:22px;
+	font-weight:1000;
+	letter-spacing:.08em;
+	color: rgba(255,255,255,.92);
+}
+.victorySub{ margin-top:8px; color: rgba(255,255,255,.68); font-weight:900; letter-spacing:.04em; }
+.victoryBtns{ display:grid; grid-template-columns: 1fr; gap:12px; width:min(520px, 92%); margin-top:18px; }
+/* 派系顯示（更霸氣） */
+.factionBadge{
+	display:flex;
+	align-items:center;
+	gap:10px;
+	padding:8px 10px;
+	border-radius:14px;
+	background: rgba(0,0,0,.18);
+	border:1px solid rgba(255,255,255,.14);
+	box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
+}
+.factionBadge .fimg{
+	width:34px;
+	height:34px;
+	object-fit:contain;
+	filter: drop-shadow(0 6px 16px rgba(0,0,0,.55));
+}
+.factionBadge .fname{
+	font-weight:1000;
+	letter-spacing:.10em;
+	text-transform: uppercase;
+	color: rgba(255,255,255,.92);
+}
+.factionBadge .tagline{ display:block; margin-top:3px; font-size:11px; font-weight:900; letter-spacing:.08em; color: rgba(255,255,255,.60); }
 .modeCard{ text-align:left; padding:16px; border-radius:16px; border:1px solid rgba(255,255,255,.18); background: rgba(0,0,0,.2); color:var(--text); cursor:pointer; transition: transform .08s ease, border-color .08s ease; }
 .modeCard:hover{ transform: translateY(-1px); border-color: rgba(106,228,255,.55); }
 .modeCard.primary{ border-color: rgba(106,228,255,.65); }
@@ -355,50 +913,104 @@ dialog::backdrop{ background: rgba(0,0,0,.55); }
 .titleBtns{ display:grid; grid-template-columns: 1fr; gap:10px; width:min(360px, 90%); margin-top:14px; }
 .titleBtns button{ padding:12px; border-radius:14px; border:1px solid rgba(255,255,255,.18); background: rgba(0,0,0,.2); color:var(--text); cursor:pointer; }
 
+/* 右側戰報（桌面版，無框） */
+.panel.rightLog{
+	display:none;
+	background: transparent;
+	border: none;
+	box-shadow: none;
+	padding: 6px 10px;
+}
+.panel.rightLog h2{ margin-top: 6px; }
 /* Desktop/tablet wide layout */
 @media (min-width: 980px){
-	.top{ align-items:center; padding:14px 18px; }
-	.layout{ grid-template-columns: 320px 1fr 320px; gap:14px; padding:14px; }
-	.log{ height:280px; }
+	.top{ align-items:center; padding:12px 12px; }
+	/* 桌面：用盡畫面（減少左右黑邊），但仍保持最大寬度 */
+	.layout{ grid-template-columns: 1fr; gap:10px; padding:10px; justify-items:stretch; max-width: 1600px; margin: 0 auto; }
+	.panel.center{ width: 100%; }
 	.modeCards{ grid-template-columns: 1fr 1fr; }
-	.panel.left{ display:block; }
 	.infoFab{ display:none; }
+	/* 遊戲中：完全貼邊 */
+	body.inGame .layout{ padding: 0; max-width: none; }
+	/* 戰報固定用 bottom 錨定，唔再用 top（避免壓住手牌） */
 }
-/* Mobile gameplay: hide info panel by default + info FAB */
+/* 浮動操作列（取代右側 pane） */
+.actionBar{
+	position: fixed;
+	left: 50%;
+	bottom: 14px;
+	transform: translateX(-50%);
+	display: flex;
+	gap: 10px;
+	padding: 10px;
+	border-radius: 16px;
+	background: rgba(12, 16, 32, .78);
+	backdrop-filter: blur(12px);
+	border: 1px solid rgba(255,255,255,.14);
+	box-shadow: 0 24px 70px rgba(0,0,0,.55);
+	z-index: 30;
+	/* 重要：避免浮層擋住手牌點擊（只允許按鈕可點） */
+	pointer-events: none;
+}
+.actionBar button{
+	padding: 12px 14px;
+	border-radius: 14px;
+	border: 1px solid rgba(255,255,255,.18);
+	background: rgba(0,0,0,.20);
+	color: var(--text);
+	cursor: pointer;
+	font-weight: 900;
+	letter-spacing: .04em;
+	font-size: 12px;
+	line-height: 1;
+	pointer-events: auto;
+}
+.actionBar button.primary{ border-color: rgba(106,228,255,.60); }
+/* 你指定：出牌綠光、PASS 紅光 */
+#btnPlay{
+	border-color: rgba(97,255,184,.55);
+	box-shadow:
+		0 0 0 1px rgba(97,255,184,.15),
+		0 0 18px rgba(97,255,184,.18);
+}
+#btnPlay:hover{
+	box-shadow:
+		0 0 0 1px rgba(97,255,184,.22),
+		0 0 24px rgba(97,255,184,.28);
+}
+#btnPass{
+	border-color: rgba(255,106,106,.55);
+	box-shadow:
+		0 0 0 1px rgba(255,106,106,.15),
+		0 0 18px rgba(255,106,106,.18);
+}
+#btnPass:hover{
+	box-shadow:
+		0 0 0 1px rgba(255,106,106,.22),
+		0 0 24px rgba(255,106,106,.28);
+}
+.actionBar button.ghost{ border-color: rgba(255,255,255,.12); color: rgba(255,255,255,.82); }
+.actionBar button:disabled{ opacity:.45; cursor:not-allowed; }
+/* 讓底部操作列唔會遮住內容：改用 z-index，唔再用超大 padding 推走版面 */
+#rowP0{ padding-bottom: 0; }
+#p0Hand{ position: relative; z-index: 60; }
+.actionBar{ z-index: 40; }
+@media (max-width: 420px){
+	.actionBar{ gap: 8px; padding: 8px; border-radius: 14px; }
+	.actionBar button{ padding: 12px 10px; border-radius: 12px; }
+	#screenGame{ padding-bottom: 120px; }
+}
+/* 右側操作 pane 已移除（保險：所有尺寸都隱藏） */
+.panel.right{ display:none; }
+/* Mobile gameplay */
 @media (max-width: 979px){
-	/* 左側資訊預設收起，改用「資訊」浮動按鈕開關 */
-	.panel.left{ display:none; padding:12px; }
-	body.infoOpen .panel.left{ display:block; }
-	.infoFab{
-		position: fixed;
-		right: 12px;
-		bottom: 96px; /* 避開吸底操作區 */
-		z-index: 20;
-		padding: 12px 14px;
-		border-radius: 999px;
-		border: 1px solid rgba(255,255,255,.18);
-		background: rgba(18,26,51,.86);
-		color: var(--text);
-		font-weight: 900;
-		letter-spacing: .08em;
-		box-shadow: 0 12px 24px rgba(0,0,0,.35);
-		backdrop-filter: blur(10px);
-		cursor: pointer;
-	}
-	body.infoOpen .infoFab{ background: rgba(106,228,255,.20); border-color: rgba(106,228,255,.55); }
-	.panel.right{
-		position: sticky;
-		bottom: 0;
-		z-index: 9;
-		backdrop-filter: blur(10px);
-		background: rgba(18,26,51,.78);
-	}
+	/* 右側操作 pane 已移除 */
+	.panel.right{ display:none; }
 	.actions button{
 		padding:14px 12px;
 		border-radius:14px;
 		font-weight:800;
 	}
-	.log{ height:160px; }
 }
 /* Small phones */
 @media (max-width: 420px){
@@ -406,4 +1018,31 @@ dialog::backdrop{ background: rgba(0,0,0,.55); }
 	.bigTitle{ font-size:44px; }
 	.panel{ padding:12px; }
 	.actions{ grid-template-columns: 1fr; }
+}
+/* 手機橫向（landscape）：優先『橫向玩』版面 */
+@media (max-width: 980px) and (orientation: landscape){
+	/* 讓畫面更似掌機：少 padding，更多可用高度 */
+	.layout{ padding: 6px; gap: 8px; }
+	.panel{ padding: 8px; }
+	/* 對手列收窄，騰位俾中央桌 + 手牌 */
+	.playerRow{ padding: 10px; }
+	.phand{ margin-top: 6px; }
+	/* 中央桌收緊 */
+	.tableCenter{ padding: 12px; margin: 8px auto 10px auto; }
+	.currentPile{ min-height: 78px; }
+	.currentPile .label{ transform: translateY(-44px); }
+	.pileStack{ min-height: 96px; max-height: 130px; padding: 8px; }
+	/* 手牌縮少少，但保持扇形 */
+	#p0Hand{ --handCardW: 70px; --handCardH: 98px; padding-top: 8px; padding-bottom: 4px; }
+	#p0Hand .handCard{ margin-left: -44px; }
+	/* 底部操作列縮細少少 */
+	.actionBar{ bottom: 8px; padding: 8px; gap: 8px; border-radius: 14px; }
+	.actionBar button{ padding: 10px 10px; min-width: 92px; }
+	#screenGame{ padding-bottom: 120px; }
+}
+/* 非常矮嘅橫向（例如 667x375）：再收緊 */
+@media (max-width: 980px) and (max-height: 420px) and (orientation: landscape){
+	#p0Hand{ --handCardW: 64px; --handCardH: 90px; }
+	.pileStack{ max-height: 112px; }
+	.actionBar button{ min-width: 86px; }
 }
